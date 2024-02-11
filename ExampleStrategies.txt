@@ -1,0 +1,57 @@
+In [184]: %run -t "/home/myco/CODE/PROJECT/crib/cribbage.py"
+Dealt:  [Card( A♠), Card( 5♠), Card( 6♦), Card( 6♥), Card( 6♠), Card( 9♦)]
+___________
+Highest possible score
+With hand: [Card( 5♠), Card( 6♦), Card( 6♥), Card( 6♠)]
+Best cut:  4♠, Score: 21.0
+Mean score: 9.956521739130435, Median score: 8.0
+Worst cut:  2♠, Score 6.0
+___________
+Highest mean score
+With hand: [Card( 6♦), Card( 6♥), Card( 6♠), Card( 9♦)]
+Best cut:  9♠, Score: 20.0
+Mean score: 13.217391304347826, Median score: 12.0
+Worst cut:  2♠, Score 12.0
+___________
+Highest Median score
+With hand: [Card( 6♦), Card( 6♥), Card( 6♠), Card( 9♦)]
+Best cut:  9♠, Score: 20.0
+Mean score: 13.217391304347826, Median score: 12.0
+Worst cut:  2♠, Score 12.0
+___________
+Highest Worst case score
+With hand: [Card( 6♦), Card( 6♥), Card( 6♠), Card( 9♦)]
+Best cut:  9♠, Score: 20.0
+Mean score: 13.217391304347826, Median score: 12.0
+Worst cut:  2♠, Score 12.0
+___________
+Best "fittness" parameter
+With hand: [Card( 6♦), Card( 6♥), Card( 6♠), Card( 9♦)]
+Best cut:  9♠, Score: 20.0
+Mean score: 13.217391304347826, Median score: 12.0
+Worst cut:  2♠, Score 12.0
+4 0 0 0 0
+
+IPython CPU timings (estimated):
+  User   :       0.02 s.
+  System :       0.00 s.
+Wall time:       0.02 s.
+
+In [185]: stats
+Out[185]: 
+      fitness  maximum       mean  median  minimum                  keep
+0   57.217391     20.0  13.217391    12.0     12.0  [ 6♦,  6♥,  6♠,  9♦]
+1   44.956522     21.0   9.956522     8.0      6.0  [ 5♠,  6♦,  6♥,  6♠]
+2   39.043478     16.0   9.043478     8.0      6.0  [ 5♠,  6♥,  6♠,  9♦]
+3   39.043478     16.0   9.043478     8.0      6.0  [ 5♠,  6♦,  6♠,  9♦]
+4   39.043478     16.0   9.043478     8.0      6.0  [ 5♠,  6♦,  6♥,  9♦]
+5   32.217391     12.0   8.217391     6.0      6.0  [ A♠,  6♦,  6♥,  6♠]
+6   31.478261     12.0   7.478261     6.0      6.0  [ A♠,  6♥,  6♠,  9♦]
+7   31.478261     12.0   7.478261     6.0      6.0  [ A♠,  6♦,  6♠,  9♦]
+8   31.478261     12.0   7.478261     6.0      6.0  [ A♠,  6♦,  6♥,  9♦]
+9   26.739130     10.0   6.739130     6.0      4.0  [ A♠,  5♠,  6♠,  9♦]
+10  26.739130     10.0   6.739130     6.0      4.0  [ A♠,  5♠,  6♥,  9♦]
+11  26.739130     10.0   6.739130     6.0      4.0  [ A♠,  5♠,  6♦,  9♦]
+12  25.869565     12.0   5.869565     4.0      4.0  [ A♠,  5♠,  6♥,  6♠]
+13  25.869565     12.0   5.869565     4.0      4.0  [ A♠,  5♠,  6♦,  6♠]
+14  25.869565     12.0   5.869565     4.0      4.0  [ A♠,  5♠,  6♦,  6♥]
