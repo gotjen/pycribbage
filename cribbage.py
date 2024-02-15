@@ -19,7 +19,7 @@ from itertools import combinations, chain
 # Card type defs
 SUIT = int
 Suit = range(4)
-suit_char = ['♠', '♣', '♥', '♦']
+suit_char = '♠♥♦♣'
 
 VALUE = int
 Value = range(13)
@@ -29,9 +29,9 @@ value_char = [' A',' 2',' 3',' 4',' 5',' 6',' 7',' 8',' 9','10',' J',' Q',' K']
 class Card:
     Suit:  SUIT
     Value: VALUE
-    def __post_init__(self) -> None:
-        mesg = f'Card suit out of range [0-index3]: {self.Suit}' if self.Suit in Suit else ''
-        mesg += f'\nCard value out of index [0-12]: {self.Value}' if self.Value in Value else ''
+    def __post_init__(self):
+        mesg  = f'Card suit out of range [0-3]: {self.Suit}' if self.Suit not in Suit else ''
+        mesg += f'\nCard value out of ranger [0-12]: {self.Value}' if self.Value not in Value else ''
         assert not mesg, ValueError(mesg)
     def __str__(self):
         return value_char[self.Value] + suit_char[self.Suit]
@@ -525,7 +525,7 @@ if __name__ == '__main__':
 
     for k in range(N):
 
-        samp = sample(deck, 7)
+        samp = sample(list(deck), 7)
         cut = [ samp[0] ]
         deal = samp[1:]
 
