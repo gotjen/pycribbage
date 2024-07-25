@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Fri Jan  5 18:37:03 2024
 
@@ -15,8 +13,8 @@ import plotly.express as px
 from typing import Tuple, Set, List
 from random import sample, shuffle
 from itertools import combinations
-from playing_cards import Card, full_deck, sort_cards, random_cards
-from cribbage_gameplay import breakdown_counter_empty, cribscore
+from src.playing_cards import Card, full_deck, sort_cards, random_cards
+from src.cribbage_gameplay import breakdown_counter_empty, cribscore
 
 def split_cards(hand:Set[Card,],idisc:List[int]) -> Tuple[Set[Card,],Set[Card,]]:
     keep = { card for k,card in enumerate(hand) if not k in idisc}
@@ -307,9 +305,7 @@ def cribmatch(p1_strat, p2_strat):
     print(f'Player1:{agents[True].strategy}: {scoreboard[True]}')
     print(f'Player2:{agents[False].strategy}: {scoreboard[False]}')
 
-
-if __name__ == '__main__':
-
+def crib_score_stats():
     # cribmatch('fit','fit')
     N = 5000
 
@@ -340,3 +336,6 @@ if __name__ == '__main__':
                         title=f'Optimal Cribbage Strategy vs Random Discard, N={N}')
     fig.show()
 
+
+if __name__ == '__main__':
+    print('dingus')

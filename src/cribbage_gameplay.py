@@ -2,18 +2,30 @@ from typing import Set
 from itertools import combinations, chain
 
 # cribbage specific rules
-CribValue = [1,2,3,4,5,6,7,8,9,10,10,10,10] # maps to `Value`
+card_value = [1,2,3,4,5,6,7,8,9,10,10,10,10] # maps to `Value`
 
+# Counter and score for each score type.
 breakdown_counter = \
-    {'zero': 0, # count   
-     '15': 0, # count
-     'pair': 0, # count
-     'run4': 0, # count
-     'run3': 0, # count
-     'run5': 0, # count
-     'flush4': 0, # count
-     'flush5': 0, # count
-     'nibs': 0, # count
+    {'zero': 0, 
+     'fifteen': 0, 
+     'pair': 0, 
+     'run3': 0, 
+     'run4': 0, 
+     'run5': 0, 
+     'flush4': 0, 
+     'flush5': 0, 
+     'nibs': 0
+    }
+score_value = \
+    {'zero': 0,     # count
+     'fifteen': 2,  # count
+     'pair': 2,     # count
+     'run': 1,      # multiplier
+     'flush4': 4,   # count
+     'flush5': 5,   # count
+     'straight_flush': 2,   # multiplier
+     'nibs': 1,     # count
+     'nobs': 2      # count
     }
 
 def breakdown_counter_empty ():
@@ -22,28 +34,23 @@ def breakdown_counter_empty ():
 class CribCountException(Exception):
     pass
 
-def isrun(sub):
-    return  all([k==(c.Value-sub[0].Value) for k,c in enumerate(sub)])
+
 def isnibs(hand):
     for c in hand[1:]:
         if c.Value == 10 and c.Suit == hand[0].Suit:
             return True
     return False
-def is15(sub):
-    return sum([CribValue[c.Value] for c in sub]) == 15
-def ispair(sub):
-    # if len(sub)==0:
-    #     print(sub)
-    #     return sub[0].Value == sub[1].Value
-    # return False
-    return len(sub)==2 and sub[0].Value==sub[1].Value
 def isflush(hand):
-    flush = 0
-    if all([c.Suit == hand[1].Suit for c in hand[2:]]):
-        flush = 4
-        if hand[0].Suit == hand[1].Suit:
-            flush += 1
-    return flush
+    # all cards are the same suit
+    return len(set(map(lambda c: c.Suit, hand)))==1
+def isflush_in_hand(hand):
+    return len(set(map(lambda c: c.Suit, hand[:4])))==1
+def isrun(sub):
+    return  all([k==(c.Value-sub[0].Value) for k,c in enumerate(sub)])
+def isfifteen(sub):
+    return sum([card_value[c.Value] for c in sub]) == 15
+def ispair(sub):
+    return len(sub)==2 and sub[0].Value==sub[1].Value
 
 def cribscore(hand):
     breakdown = breakdown_counter_empty()
@@ -52,12 +59,15 @@ def cribscore(hand):
     # jack
     if isnibs(hand):
         breakdown['nibs'] += 1
-        score +=1;
+        score += score_value['nibs']
         
     # flush
-    if flush:=isflush(hand):
-        breakdown['flush'+str(flush)] += 1
-        score += flush
+    if isflush(hand):
+        breakdown['flush5'] += 1
+        score += score_value['flush5']
+    elif isflush_in_hand(hand):
+        breakdown['flush4'] += 1
+        score += score_value['flush4']
     
     # Run thorugh all card combos
     combs = chain(*[combinations(hand,k) for k in range(len(hand),1,-1)])
@@ -66,15 +76,15 @@ def cribscore(hand):
         sublen = len(sub)
         sub = sorted(sub, key=lambda c: c.Value)
 
-        # 15's
-        if is15(sub):
-            breakdown['15'] += 1
-            score += 2
+        # fifteens
+        if isfifteen(sub):
+            breakdown['fifteen'] += 1
+            score += score_value['fifteen']
         
         # run
         if sublen>=minrunlen and isrun(sub):
             breakdown['run'+str(sublen)] += 1
-            score += sublen
+            score += score_value['run'+str(sublen)]
             minrunlen = sublen
             
         # pair
@@ -90,7 +100,7 @@ def cribscore(hand):
     return score, breakdown
 def chantscore(bd):
     chant = []
-    scorecalc = 2 * bd['15'] + \
+    scorecalc = 2 * bd['fifteen'] + \
                 2 * bd['pair'] + \
                 3 * bd['run3'] + \
                 4 * bd['run4'] + \

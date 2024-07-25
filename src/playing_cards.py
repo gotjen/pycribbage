@@ -1,9 +1,7 @@
 
 from random import sample, shuffle
 from dataclasses import dataclass
-from typing import Set, List
-
-import unittest
+from typing import Set, List, Union
 
 # Card type def
 SUIT = int
@@ -33,35 +31,47 @@ class Card:
 
 Hand = Set[Card,]
 
-def full_deck(bar:set=Hand) -> Hand:
+def full_deck(bar:Union[Hand, Card] = Hand) -> Hand:
     '''
     Generate a full deck of cards
     `deck = full_deck()` gives a deck of cards ordered by value, grouped by suit
 
     bar: optionally provide a set of cards to exclude from the deck. Useful for calculating outcome statistics
     `deck = full_deck( bar=hand )` gives all the remaining cards in the deck excluding cards in the set `hand`
-
-    do_shuffle: bool
     '''
+    
+    # force barred cards to be a set
+    try:
+        bar = set(bar)
+    except TypeError:
+        bar = {bar}
 
-    deck = { Card(s,v) for s in Suit for v in Value if (not Card(s,v) in bar) }
+    deck = { Card(s,v) for s in Suit for v in Value if Card(s,v) not in bar }
     return deck
 
 def sort_cards(cards:Set[Card,]) -> List[Card,]:
     return sorted(cards, key=lambda c: c.Value)
 
-def random_cards(n=5, pool:Set[Card,]=full_deck(), do_sort:bool=False):
+def random_cards(n=5, pool:Set[Card,]=full_deck()):
     return set( sample(list(pool),n) )
 
+import unittest
+
 class TestCards(unittest.TestCase):
+    def setUp(self):
+        self.deck = list(full_deck())
+
     def test_fulldeck(self):
-        deck = full_deck()
-        assert len(deck) == 52, f'There are 52 cards in a deck not {len(deck)}'
+        assert len(self.deck) == 52, f'There are 52 cards in a deck not {len(self.deck)}'
         
-        excl = [c for k,c in enumerate(deck) if k<5]
+
+        excl = [self.deck[k] for k in range(0,52,3)]
         deck_part = full_deck(bar=excl)
-        assert len(deck_part) == 52-5, 'Should have excluded 5 cards'
-        assert not any( [ c in deck_part for c in excl ] ), 'All excluded cards should not be in deck_part'
+        assert len(deck_part) == 52-len(excl), 'Should have excluded n cards'
+        assert not any([e in deck_part for e in excl]), 'Excluded cards appear in deck sample'
+
+        subsample = random_cards(n=10, pool=excl)
+        assert all([c in excl for c in subsample]), 'All cards in sample must be from pool'
 
 if __name__=='__main__':
     unittest.main()
