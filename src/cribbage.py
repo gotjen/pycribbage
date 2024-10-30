@@ -4,29 +4,31 @@ Created on Fri Jan  5 18:37:03 2024
 @author: Henry Gotjen
 """
 
-import time
+# import time
 # import tqdm
 import numpy as np
 import pandas as pd
 import plotly.express as px
 
 from typing import Tuple, Set, List
-from random import sample, shuffle
+from random import sample
 from itertools import combinations
-from src.playing_cards import Card, full_deck, sort_cards, random_cards
-from src.cribbage_gameplay import breakdown_counter_empty, cribscore
+from src.playing_cards import Card, full_deck, random_cards
+from src.cribbage_gameplay import breakdown_counter_empty, cribscore, chantscore
 
-def split_cards(hand:Set[Card,],idisc:List[int]) -> Tuple[Set[Card,],Set[Card,]]:
-    keep = { card for k,card in enumerate(hand) if not k in idisc}
-    disc = { hand[k] for k in idisc }
+
+def split_cards(hand: Set[Card,], idisc: List[int]) -> Tuple[Set[Card,], Set[Card, ]]:
+    keep = {card for k,card in enumerate(hand) if k not in idisc}
+    disc = {hand[k] for k in idisc}
 
     return keep, disc
 
+
 def rand_hand_test():
     hand = random_cards(6)
-    #hand = [Card(1,8), Card(2,8), Card(2,7), Card(2,6), Card(2,5)]
-    #hand = [Card(0,k) for k in range(8,13)]
-    #hand = [Card(0,4), Card(0,5), Card(1,6), Card(0,6), Card(1,7)]
+    # hand = [Card(1,8), Card(2,8), Card(2,7), Card(2,6), Card(2,5)]
+    # hand = [Card(0,k) for k in range(8,13)]
+    # hand = [Card(0,4), Card(0,5), Card(1,6), Card(0,6), Card(1,7)]
 
     print(hand)
 
