@@ -2,6 +2,7 @@
 from random import sample, shuffle
 from dataclasses import dataclass
 from typing import Set, List, Union
+from contextlib import suppress
 
 # Card type def
 SUIT = int
@@ -19,15 +20,15 @@ class Card:
     Suit:  SUIT
     Value: VALUE
     def __post_init__(self) -> None:
-        '' 'Validate card suit and value'''
+        '''Validate card suit and value'''
         mesg  = f'Card suit out of range [0-3]: {self.Suit}' if self.Suit not in Suit else ''
         mesg += f'\nCard value out of ranger [0-12]: {self.Value}' if self.Value not in Value else ''
         assert not mesg, ValueError(mesg)
     def __str__(self) -> str:
         '''Formats <Value><Suit> like 4♥'''
-        return value_char[self.Value] + suit_char[self.Suit]
+        return '[' + value_char[self.Value] + ' ' + suit_char[self.Suit] + '] '
     def __repr__(self) -> str:
-        return f'Card({self.__str__()})'
+        return self.__str__()
 
 Hand = Set[Card,]
 
@@ -50,7 +51,7 @@ def full_deck(bar:Union[Hand, Card] = Hand) -> Hand:
     return deck
 
 def sort_cards(cards:Set[Card,]) -> List[Card,]:
-    return sorted(cards, key=lambda c: c.Value)
+    return sorted(list(cards), key=lambda c: c.Value + 0.1*c.Suit)
 
 def random_cards(n=5, pool:Set[Card,]=full_deck()):
     return set( sample(list(pool),n) )
@@ -64,7 +65,6 @@ class TestCards(unittest.TestCase):
     def test_fulldeck(self):
         assert len(self.deck) == 52, f'There are 52 cards in a deck not {len(self.deck)}'
         
-
         excl = [self.deck[k] for k in range(0,52,3)]
         deck_part = full_deck(bar=excl)
         assert len(deck_part) == 52-len(excl), 'Should have excluded n cards'

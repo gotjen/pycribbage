@@ -34,7 +34,6 @@ def breakdown_counter_empty ():
 class CribCountException(Exception):
     pass
 
-
 def isnibs(hand):
     for c in hand[1:]:
         if c.Value == 10 and c.Suit == hand[0].Suit:
@@ -84,7 +83,7 @@ def cribscore(hand):
         # run
         if sublen>=minrunlen and isrun(sub):
             breakdown['run'+str(sublen)] += 1
-            score += score_value['run'+str(sublen)]
+            score += score_value['run'] * sublen
             minrunlen = sublen
             
         # pair

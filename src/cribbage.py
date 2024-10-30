@@ -270,7 +270,7 @@ def cribmatch(p1_strat, p2_strat):
     nloop = 0; looplimit = playtoscore/4
     while nloop<looplimit:
         nloop += 1
-        player = not dealer # oppostie player
+        player = not dealer # opposite player
 
         # deal the cards
         deck = full_deck(do_shuffle=True)
@@ -279,19 +279,22 @@ def cribmatch(p1_strat, p2_strat):
 
         # player agents choose keeps
         keep = {True: [], False: []}
-        keep[dealer], disc1 = agents[dealer].choose(deal[dealer])
-        keep[player], disc2 = agents[player].choose(deal[player])
-        crib = disc1 + disc2
+        keep[dealer], discard1 = agents[dealer].choose(deal[dealer])
+        keep[player], discard2 = agents[player].choose(deal[player])
+        crib = discard1 + discard2
 
         # score player
-        score, _ = cribscore( [cut] + keep[player] ); scoreboard[player] += score
+        score, _ = cribscore( [cut] + keep[player] )
+        scoreboard[player] += score
         if scoreboard[player] >= playtoscore:
             winner = ('Player1' if player else 'Player2') + ':' + agents[player].strategy
             break
 
         # score dealer
-        score, _ = cribscore( [cut] + keep[dealer] ); scoreboard[dealer] += score
-        score, _ = cribscore( [cut] + crib ); scoreboard[dealer] += score
+        score, _ = cribscore( [cut] + keep[dealer] )
+        scoreboard[dealer] += score
+        score, _ = cribscore( [cut] + crib )
+        scoreboard[dealer] += score
         if scoreboard[dealer] >= playtoscore:
             winner = ('Player1' if dealer else 'Player2') + ':' + agents[dealer].strategy
             break
