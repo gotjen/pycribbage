@@ -10,19 +10,17 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 
-from typing import Tuple, Set, List
+from typing import Tuple, List
+from collections import Counter
 from random import sample
 from itertools import combinations
-from src.playing_cards import Card, full_deck, random_cards
-from src.cribbage_gameplay import breakdown_counter_empty, cribscore, chantscore
 
-
-def split_cards(hand: Set[Card,], idisc: List[int]) -> Tuple[Set[Card,], Set[Card, ]]:
-    keep = {card for k,card in enumerate(hand) if k not in idisc}
-    disc = {hand[k] for k in idisc}
-
-    return keep, disc
-
+if __name__ == "__main__":
+    from playing_cards import full_deck, random_cards, discard_from_hand
+    from cribbage_gameplay import cribscore, score_value
+else:
+    from .playing_cards import full_deck, random_cards, discard_from_hand
+    from .cribbage_gameplay import cribscore,score_value
 
 def rand_hand_test():
     hand = random_cards(6)
@@ -77,52 +75,41 @@ def random_card_stats():    # statistics
     for k in range(nsamp):
         hand = random_cards()
         HANDS.append(hand)
+
         sc, bd = cribscore(hand)
-
         SCORE[k] = sc
-
-        #print(hand,bd)
-
         for key in BDOWN.keys():
             BDOWN[key] += bd[key]
 
-    print(BDOWN)
-
-    # sampmean = SCORE.mean()
-    # figtit = f'Distribution of random Cribbage hands, n={nsamp}, mean={sampmean}'
-    # fig1 = px.histogram(SCORE, title=figtit)
-    # fig1.update_xaxes(title='Score')
-    # fig1.update_yaxes(title='Frequency')
-    # fig1.show()
+    sampmean = SCORE.mean()
+    figtit = f'Distribution of random Cribbage hands, n={nsamp}, mean={sampmean}'
+    fig1 = px.histogram(SCORE, title=figtit, barmode='relative')
+    fig1.update_xaxes(title='Score')
+    fig1.update_yaxes(title='RelativeFrequency')
+    fig1.show()
 
     data = {'Source': list(BDOWN.keys()), 'Frequency':list(BDOWN.values())}
     fig2 = px.bar(data, x='Source',y='Frequency', title='Point Source')
     fig2.show()
 
-def brute_cut_analysis(deal:Tuple[Card,]):
-
+def brute_cut_analysis(deal):
     ndeal = len(deal)
-    DECK = full_deck(bar=deal) # remaining draw options
 
-    iDISC = [keep for keep in combinations(range(ndeal),2)]
-    iKEEP = [tuple([k for k in range(ndeal) if k not in idisc]) for idisc in iDISC]
-    SCORE = np.zeros((len(DECK),len(iDISC)))
+    CUTS = full_deck(bar=deal) # remaining draw options
 
-    
-    # print(deal)
-    for j, ikeep in enumerate(iKEEP):
-        for k,cut in enumerate(DECK):
-            hand = [cut] + [deal[k] for k in ikeep]
+    iDISC = list( combinations(range(ndeal),2) )
+    SCORE = np.zeros((len(CUTS),len(iDISC)))
+
+    for j, idisc in enumerate(iDISC):
+        keep, disc = discard_from_hand( deal, idisc)
+        for k, cut in enumerate(CUTS):
+            hand = [cut] + keep
             SCORE[k,j] = cribscore(hand)[0]
     
-    return vars() #SCORE, iDISC, iKEEP, DECK
+    return SCORE, iDISC, CUTS
 
-def optimal_discard(deal:Tuple[Card,]):
-    res = brute_cut_analysis(deal)
-    SCORE = res['SCORE']
-    iDISC = res['iDISC']
-    iKEEP = res['iKEEP']
-    DECK  = res['DECK']
+def optimal_discard(deal):
+    SCORE, iDISC, CUTS = brute_cut_analysis(deal)
     
     # stats
     # score axes: score[ k:cut_of_deck, j:kept_hand]
@@ -133,22 +120,19 @@ def optimal_discard(deal:Tuple[Card,]):
     fitness = (maxscores + meanscores + medscores + minscores)/4
 
     ibest = fitness.argmax()
-    keep = [ deal[k] for k in iKEEP[ibest] ]
-    disc = [ deal[k] for k in iDISC[ibest] ]
+    keep, disc = discard_from_hand(deal, iDISC[ibest])
     expectedscore = fitness[ibest]
 
-    return keep, disc
+    return iDISC[ibest]
 
-def rand_deal_explorer():
+def random_deal_explorer(deal = None):
 
-    deal = random_cards(6)
+    if not deal:
+        deal = random_cards(6)
+
     print('Dealt: ', deal)
 
-    res = brute_cut_analysis(deal)
-    SCORE = res['SCORE']
-    iDISC = res['iDISC']
-    iKEEP = res['iKEEP']
-    DECK  = res['DECK']
+    SCORE, iDISC, CUTS = brute_cut_analysis(deal)
     
     # stats
     # score axes: score[ k:cut_of_deck, j:kept_hand]
@@ -156,159 +140,141 @@ def rand_deal_explorer():
     meanscores = np.mean(SCORE, axis=0)
     medscores  = np.median(SCORE, axis=0)
     minscores  = np.min(SCORE, axis=0)
-    fitness = maxscores + meanscores + medscores + minscores
-
-    keepslice = lambda j: [ deal[k] for k in iKEEP[j] ]
-    discslice = lambda j: [ deal[k] for k in iDISC[j] ]
+    fitness = (maxscores + meanscores + medscores + minscores)/4
 
     stats = pd.DataFrame({'fitness':fitness, 'maximum':maxscores,
                           'mean':meanscores, 'median':medscores, 
-                          'minimum':minscores,
-                          'keep':[ keepslice(k) for k in range(len(iKEEP))],
-                          'discard': [ discslice(k) for k in range(len(iDISC))]})
+                          'minimum':minscores, 'i_discard': iDISC})
+
     stats = stats.sort_values('fitness',ascending=False, ignore_index=True)
 
     # Highest possible score
     ikeepmax = maxscores.argmax()
-    ibestcut = SCORE[:,ikeepmax].argmax()
-    iworstcut = SCORE[:,ikeepmax].argmin()
+    ibest = SCORE[:,ikeepmax].argmax()
+    iworst = SCORE[:,ikeepmax].argmin()
+    thishand, _ = discard_from_hand(deal, iDISC[ikeepmax])
 
     print(f'___________\nHighest possible score')
-    print(f'With hand: {keepslice(ikeepmax)}')
-    print(f'Best cut: {DECK[ibestcut]}, Score: {maxscores[ikeepmax]}')
+    print(f'With hand: {thishand}')
+    print(f'Best cut: {CUTS[ibest]}, Score: {maxscores[ikeepmax]}')
     print(f'Mean score: {meanscores[ikeepmax]}, Median score: {medscores[ikeepmax]}')
-    print(f'Worst cut: {DECK[iworstcut]}, Score {minscores[ikeepmax]}')
+    print(f'Worst cut: {CUTS[iworst]}, Score {minscores[ikeepmax]}')
 
     # Highest mean score
     ikeepmean = meanscores.argmax()
-    ibestcut = SCORE[:,ikeepmean].argmax()
-    iworstcut = SCORE[:,ikeepmean].argmin()
+    ibest = SCORE[:,ikeepmean].argmax()
+    iworst = SCORE[:,ikeepmean].argmin()
+    thishand, _ = discard_from_hand(deal, iDISC[ikeepmax])
 
     print(f'___________\nHighest mean score')
-    print(f'With hand: {keepslice(ikeepmean)}')
-    print(f'Best cut: {DECK[ibestcut]}, Score: {maxscores[ikeepmean]}')
+    print(f'With hand: {thishand}')
+    print(f'Best cut: {CUTS[ibest]}, Score: {maxscores[ikeepmean]}')
     print(f'Mean score: {meanscores[ikeepmean]}, Median score: {medscores[ikeepmean]}')
-    print(f'Worst cut: {DECK[iworstcut]}, Score {minscores[ikeepmean]}')
+    print(f'Worst cut: {CUTS[iworst]}, Score {minscores[ikeepmean]}')
 
     # Highest median score
     ikeepmed = medscores.argmax()
-    ibestcut = SCORE[:,ikeepmed].argmax()
-    iworstcut = SCORE[:,ikeepmed].argmin()
+    ibest = SCORE[:,ikeepmed].argmax()
+    iworst = SCORE[:,ikeepmed].argmin()
+    thishand, _ = discard_from_hand(deal, iDISC[ikeepmax])
 
     print(f'___________\nHighest Median score')
-    print(f'With hand: {keepslice(ikeepmed)}')
-    print(f'Best cut: {DECK[ibestcut]}, Score: {maxscores[ikeepmed]}')
+    print(f'With hand: {thishand}')
+    print(f'Best cut: {CUTS[ibest]}, Score: {maxscores[ikeepmed]}')
     print(f'Mean score: {meanscores[ikeepmed]}, Median score: {medscores[ikeepmed]}')
-    print(f'Worst cut: {DECK[iworstcut]}, Score {minscores[ikeepmed]}')
+    print(f'Worst cut: {CUTS[iworst]}, Score {minscores[ikeepmed]}')
 
     # Highest worst case score
     ikeepmin = minscores.argmax()
-    ibestcut = SCORE[:,ikeepmin].argmax()
-    iworstcut = SCORE[:,ikeepmin].argmin()
+    ibest = SCORE[:,ikeepmin].argmax()
+    iworst = SCORE[:,ikeepmin].argmin()
+    thishand, _ = discard_from_hand(deal, iDISC[ikeepmax])
 
     print(f'___________\nHighest Worst case score')
-    print(f'With hand: {keepslice(ikeepmin)}')
-    print(f'Best cut: {DECK[ibestcut]}, Score: {maxscores[ikeepmin]}')
+    print(f'With hand: {thishand}')
+    print(f'Best cut: {CUTS[ibest]}, Score: {maxscores[ikeepmin]}')
     print(f'Mean score: {meanscores[ikeepmin]}, Median score: {medscores[ikeepmin]}')
-    print(f'Worst cut: {DECK[iworstcut]}, Score {minscores[ikeepmin]}')
+    print(f'Worst cut: {CUTS[iworst]}, Score {minscores[ikeepmin]}')
 
     ## fittness parameter
     ikeepfit = fitness.argmax()
-    ibestcut = SCORE[:,ikeepfit].argmax()
-    iworstcut = SCORE[:,ikeepfit].argmin()
+    ibest = SCORE[:,ikeepfit].argmax()
+    iworst = SCORE[:,ikeepfit].argmin()
+    thishand, _ = discard_from_hand(deal, iDISC[ikeepmax])
 
     print(f'___________\nBest "fittness" parameter')
-    print(f'With hand: {keepslice(ikeepfit)}')
-    print(f'Best cut: {DECK[ibestcut]}, Score: {maxscores[ikeepfit]}')
+    print(f'With hand: {thishand}')
+    print(f'Best cut: {CUTS[ibest]}, Score: {maxscores[ikeepfit]}')
     print(f'Mean score: {meanscores[ikeepfit]}, Median score: {medscores[ikeepfit]}')
-    print(f'Worst cut: {DECK[iworstcut]}, Score {minscores[ikeepfit]}')
+    print(f'Worst cut: {CUTS[iworst]}, Score {minscores[ikeepfit]}')
 
-    print(ikeepmax, ikeepmean, ikeepmed, ikeepmin, ikeepfit)
-
-    print(stats)
 
 class CribAgent:
     strategy:str
+    name:str
 
-    def __init__(self, strategy=None):
+    def __init__(self, strategy, name=None):
         self.strategy = strategy # [human, random, max, mean, fit]
+        self.name = name
 
-    def choose(self,deal):
+    def discard(self,deal):
         match self.strategy:
             case 'human':
-                return self.choose_human(deal)
+                for k,card in enumerate(deal):
+                    print(k, card)
+                
+                while True:
+                    try:
+                        C = input('Choose discard. Separate index by space: ')
+                        C = list(map(int, C.split(' ')))
+                        assert len(C) == 2, "Must discard two cards"
+                        return C
+                    except Exception as err:
+                        if C == 'q':
+                            raise KeyboardInterrupt
+                        print('Invalid. Choose two cards')
             case 'random':
-                return self.choose_random(deal)
+                # Garunteed to be random
+                return [1,2]
             case 'fit':
-                return self.choose_optimal(deal)
+                return optimal_discard(deal)
             case _:
                 raise Exception(f'No such strategy {self.strategy}')
-    def choose_human(self,deal):
-        for k,card in enumerate(deal):
-            print(k, card)
-        
-        while True:
-            try:
-                C = input('Choose discard. Separate index by space: ')
-                C = np.asarray( C.split(' '), dtype=int)
-                return split_cards(deal, C)
-            except Exception as err:
-                if c == 'q':
-                    raise err
-                print('invalid')
-    def choose_random(self,deal):
-        return deal[:4], deal[4:6]
-    
-    def choose_optimal(self,deal):
-        return optimal_discard(deal)
 
-def cribmatch(p1_strat, p2_strat):
+    def play(self, hand, inplay) -> int:
+        '''
+        Phase 2 of cribbage. Choose card from hand to play
+        '''
 
-    playtoscore = 10000
-    dealer = False
-    agents = {True: CribAgent(p1_strat), False: CribAgent(p2_strat)}
-    scoreboard = {True: 0, False: 0}
+        # pass if no cards in hand
+        if not hand:
+            return None
 
-    nloop = 0; looplimit = playtoscore/4
-    while nloop<looplimit:
-        nloop += 1
-        player = not dealer # opposite player
+        # say 'go' if no cards can be played
+        max_play_value = score_value['max_tally'] - sum(inplay)
+        say_go = not any( [c.value <= max_play_value for c in hand] )
+        if say_go:
+            return 'go'
 
-        # deal the cards
-        deck = full_deck(do_shuffle=True)
-        deal = {True: deck[0:6], False: deck[6:12]}
-        cut = deck[-1]
-
-        # player agents choose keeps
-        keep = {True: [], False: []}
-        keep[dealer], discard1 = agents[dealer].choose(deal[dealer])
-        keep[player], discard2 = agents[player].choose(deal[player])
-        crib = discard1 + discard2
-
-        # score player
-        score, _ = cribscore( [cut] + keep[player] )
-        scoreboard[player] += score
-        if scoreboard[player] >= playtoscore:
-            winner = ('Player1' if player else 'Player2') + ':' + agents[player].strategy
-            break
-
-        # score dealer
-        score, _ = cribscore( [cut] + keep[dealer] )
-        scoreboard[dealer] += score
-        score, _ = cribscore( [cut] + crib )
-        scoreboard[dealer] += score
-        if scoreboard[dealer] >= playtoscore:
-            winner = ('Player1' if dealer else 'Player2') + ':' + agents[dealer].strategy
-            break
-
-        dealer = not dealer
-
-    if nloop==looplimit:
-        raise Exception('Game exited at loop limit')
-
-    print('Winner! ', winner)
-    print(f'Player1:{agents[True].strategy}: {scoreboard[True]}')
-    print(f'Player2:{agents[False].strategy}: {scoreboard[False]}')
+        # choose card to play
+        match self.strategy:
+            case 'human':
+                for k,card in enumerate(hand):
+                    print(k, card)
+                while True:
+                    try:
+                        return int(input('Choose play: '))
+                    except Exception as err:
+                        if C == 'q':
+                            raise KeyboardInterrupt
+                        print('Invalid. Choose one cards')
+            case ['random', 'fit']:
+                # Garunteed to be random
+                return 0
+            # case 'fit':
+            #     return optimal_discard(deal)
+            case _:
+                raise Exception(f'No such strategy {self.strategy}')
 
 def crib_score_stats():
     # cribmatch('fit','fit')
