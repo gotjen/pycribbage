@@ -1,5 +1,8 @@
+import random
 from src.cribbage_gameplay import CribbageMatch
 from src.cribbage import CribAgent
+
+random.seed
 
 def inputs(text, type_in=str):
     while True:
@@ -15,7 +18,6 @@ print('1. human v human')
 print('2. human v computer')
 print('3. computer v computer')
 
-
 match inputs('select: ', int):
     case 1:
         agent1 = CribAgent('human', input('Player 1 name: '))
@@ -29,6 +31,6 @@ match inputs('select: ', int):
     case _:
         raise ValueError('I don\'t know that game')
 
-match = CribbageMatch(agent1, agent2, verbose = True)
+match = CribbageMatch(agent1, agent2, endscore = 120, verbose = True)
 
 match.playmatch()

@@ -2,12 +2,15 @@ import random
 from itertools import combinations, chain
 
 if __name__ == "__main__":
-    from playing_cards import full_deck, discard_from_hand
+    from playing_cards import full_deck, discard_from_hand, sort_cards
 else:
-    from .playing_cards import full_deck, discard_from_hand
+    from .playing_cards import full_deck, discard_from_hand, sort_cards
 
 # cribbage specific rules
 card_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]  # maps to `Value`
+
+def sum_cards(hand):
+    return sum([card_value[c.Value] for c in hand])
 
 # Counter and score for each score type.
 breakdown_counter = {
@@ -32,7 +35,7 @@ score_value = {
     'nibs': 1,     # count
     'nobs': 2,     # count
     'last card': 1,# play
-    '31': 1,       # play
+    '31': 2,       # play
     'go': 1,       # play
     'max_tally': 31 # rules
 }
@@ -67,7 +70,7 @@ def isrun(sub):
 
 
 def isfifteen(sub):
-    return sum([card_value[c.Value] for c in sub]) == 15
+    return sum_cards(sub) == 15
 
 
 def ispair(sub):
@@ -210,7 +213,48 @@ def chantscore(bd):
         raise CribCountException('Miscount during cribchant')
     return chant
 
-class CribbageGameEnded(Exception):
+
+def score_play(inplay: list) -> int:
+    '''
+    Score points during the play
+    inplay: List - the most recent played card is last
+    '''
+
+    # TODO score points from the play
+    score = 0
+
+    # 31!
+    if sum_cards(inplay) == score_value['max_tally']:  # 31
+        score += score_value['31']
+        # self.print('31')
+
+    # 15 !
+    if sum_cards(inplay) == 15:  # fifteen
+        score += score_value['fifteen']
+        # self.print('FIFTEEN')
+
+    # Runs
+    for k in range(len(inplay), 2, -1):
+        if isrun(sort_cards(inplay[-1:-(k+1):-1])):
+            score += k * score_value['run']
+            # self.print('RUN ', inplay[-1:-(k+1):-1])  # DEBUG
+            break
+
+    # Pairs
+
+    pair_cnt = 0
+    pair_score = [0, 1, 3, 6]
+    for c in inplay[-2::-1]:
+        if c.Value == inplay[-1].Value:
+            pair_cnt += 1
+        else:
+            break
+    score += score_value['pair'] * pair_score[pair_cnt]
+
+    return score
+
+
+class CribbageGameError(Exception):
     pass
 
 class CribbageMatch:
@@ -241,9 +285,9 @@ class CribbageMatch:
     def player_name(self) -> str:
         return self.agents[self.player].name
 
-    def print(self, *message):
+    def print(self, *args, **kwargs):
         if self.verbose:
-            print(*message)
+            print(*args, **kwargs)
     
     def update_score(self, points, player):
         self.scoreboard[player] += points
@@ -256,17 +300,13 @@ class CribbageMatch:
 
         # deal the cards
         deck_shuffled = full_deck(do_shuffle=True)
-        dealt = {self.player: deck_shuffled[0:6], 
-                 self.dealer: deck_shuffled[6:12],
+        dealt = {self.player: sort_cards(deck_shuffled[0:6]), 
+                 self.dealer: sort_cards(deck_shuffled[6:12]),
                  'cut': deck_shuffled[-1]}
-
-        self.print(f'Player1: {self.dealer_name} (dealer)')
-        self.print(f'Player2: {self.player_name}')
-        self.print('Deal: ', dealt)  #DEBUG
 
         # get player discards
         players = {self.player, self.dealer}
-        idiscard = { p: self.agents[p].discard(dealt[p]) for p in players}
+        idiscard = { p: self.agents[p].discard(dealt[p], is_dealer=(p is self.dealer)) for p in players}
 
         # distribute hands
         hands = dict()
@@ -274,68 +314,107 @@ class CribbageMatch:
         hands[self.dealer], dealer_discard = discard_from_hand(dealt[self.dealer],idiscard[self.dealer])
         hands['crib'] = player_discard + dealer_discard
 
-        self.print('Hands: ', hands)
+        self.print('Deal: ', dealt)  # DEBUG
+        self.print('Hands: ', hands)  # DEBUG
 
         self.print(f'The cut: {dealt['cut']}')
-        if dealt['cut'].value_symb == 'J':
+        if dealt['cut'].value_char == 'J':
             self.print('HIS NOBS')
             self.update_score(score_value['nobs'], self.dealer)
 
         return dealt, hands
 
     def do_the_play(self, hands):
-        pass
-        # '''
-        # Phase 2 of cribbage round
-        # '''
-        # turn = self.player
-        # next_turn = None
-        # tally = 0
+        '''
+        Phase 2 of cribbage round
+        '''
+        turn = self.player
+        go_flag = None
+        do_reset = False
+        tally = 0
+        
+        inhand = {p: hands[p].copy() for p in [True,False]}  # Copy of hands to discard from
+        inplay = []  # run of played cards
 
-        # says_go = {self.dealer: False, self.player: False}
-        # inhand = {p: hands[p].copy() for p in [True,False]}  # Copy of hands to discard from
-        # inplay = []  # run of played cards
+        loopcount = 0
+        while loopcount<=25:
+            loopcount += 1
+            this_play_score = 0
 
-        # while True:
-        #     # get player discard
-        #     played = self.agents[turn].play(inhand[turn],inplay)
+            # get player discard
+            played = self.agents[turn].play(inhand[turn],inplay)
 
-        #     if played == 'go':  # GO
-        #         print(f'player {self.agent[turn].name} says go')
-        #         says_go[turn] = True
-        #         continue
-        #     elif not played: # Out of Cards
-        #         continue
+            if played == 'GO':  # player has no playable cards
+                if go_flag is None:
+                    go_flag = turn  # set flag - this is the first player to say go.
 
-        #     assert isinstance(played, int), f'Player must play card, not {played}'
+                if go_flag is not turn:  # if other player said go, this player take 1 for the go.
+                    chant = f'Player {self.agents[turn].name} takes {score_value['go']} for the "GO".'
+                    self.update_score(score_value['go'], turn)
+                    do_reset = True
+                elif not inhand[not turn]:  # if other player has no cards, other gets 1 for the go, and reset
+                    chant = f'Player {self.agents[turn].name} says "GO".'
+                    chant += f'Player {self.agents[not turn].name} takes {score_value['go']} for the "GO".'
+                    self.update_score(score_value['go'], not turn)
+                    do_reset = True
+                else:  # Pass to next player
+                    chant = f'Player {self.agents[turn].name} says "GO".'
 
-        #     # Add card to play stack
-        #     inplay.append(played)
+            else:  # Played card
+                # Add card to play stack
 
-        #     # score points from play
-        #     self.update_score(turn, self.score_play(inplay) )
+                if tally + card_value[inhand[turn][played].Value] > 31:  # Check for illegal play
+                    raise CribbageGameError(f'''Tally = {tally} exceeds 31.
+                    Player:{self.agents[turn].name} played {inhand[turn][played]}
+                    Played: {inplay}''')
 
-        #     # end play if all cards are played
-        #     if hands[self.player] or hands[self.dealer]:
-        #         self.update_score(turn, score_value['last card'])
-        #         break
+                inplay.append(inhand[turn].pop(played))
+                tally = sum_cards(inplay)
+                this_play_score += score_play(inplay)
 
-        #     # end of round
-        #     if all(says_go.values()) or (is31:=sum(inplay)==score_value['max_tally']):
-        #         self.update_score(turn, score_value['go'])
-        #         self.update_score(turn, is31)
+                is_lastcard = not inhand[self.player] and not inhand[self.dealer]
+                is_31 = tally == score_value['max_tally']
 
-        #     # switch turns
-        #     turn = not turn
+                chant = f'Player {self.agents[turn].name} plays the {inplay[-1]}. Says {tally}.'
+            
 
-    def score_hand(self,playerhands,cut):
+            if is_lastcard:
+                this_play_score += score_value['last card']
+                chant += f' Last card for {this_play_score}' + ('!' if this_play_score>1 else '.')
+            elif this_play_score:
+                chant += f'\b for {this_play_score}!'
 
-        self.print(f'Player {self.player_name} counts hand..')
-        self.print(whole_hand)
-        score, breakdown = cribscore(whole_hand)
-        self.print(chantscore(breakdown))
-        self.update_score(score, self.player)
-        self.print('')
+            self.print(chant)
+            self.update_score(this_play_score, turn)
+
+            # end play if all cards are played
+            if is_lastcard:
+                break  ## EXIT
+
+            # Reset play if 
+            if is_31:  # 31
+                go_flag = not turn  # HACK go_flag to incidate next player.
+                do_reset = True
+
+            # end of play to 31, reset
+            if do_reset:
+                self.print('')
+                turn = go_flag  # Go flag indicates the first player to say go. They go first in next round
+                go_flag = None  # Clear go_flag
+                inplay = []  # empty play pile
+                tally = 0  # reset score tally
+                chant = ''
+                do_reset = False
+
+            # switch turns
+            if inhand[not turn] and not go_flag is (not turn):  # only if other player has cards they can play
+                turn = not turn
+
+        if loopcount > 12:  # no play can exceed 10 volleys
+            raise CribbageGameError('Play loop ended on loopmax')
+
+        if inhand[self.dealer] or inhand[self.player]:
+            raise CribbageGameError(f'The play ended but players still have cards, {inhand}')
 
     def do_the_count(self, hands, dealt):
         '''
@@ -370,13 +449,23 @@ class CribbageMatch:
         self.print('')
 
     def playround(self):
+
+        self.print(f'Player1: {self.dealer_name} (dealer)')
+        self.print(f'Player2: {self.player_name}')
+
         # Phase 1: Deal and discard
+        self.print('_________')
+        self.print(' PHASE 1')
         dealt, hands = self.do_the_deal()
 
         # Phase 2: the play
+        self.print('_________')
+        self.print(' PHASE 2')
         self.do_the_play(hands)
 
         # Phase 3; the count
+        self.print('_________')
+        self.print(' PHASE 3')
         self.do_the_count(hands,dealt)
 
         self.dealer = not self.dealer
@@ -389,18 +478,18 @@ class CribbageMatch:
 
         while not self.has_winner and round_count < looplimit:
             round_count += 1
-            print(f'Round {round_count}')
+            self.print(f'Round {round_count}')
             try: 
                 self.playround()
                 self.print(self.scoreboard)
-            except CribbageGameEnded as e:
+            except CribbageGameError as e:
                 if not self.has_winner:
-                    print('somehow, no winner')
+                    raise e
         
         self.congratulate()
 
         if round_count >= looplimit:
-            raise CribbageGameEnded('Cribbage match exited at loop limit. This is suspicious')
+            raise CribbageGameError('Cribbage match exited at loop limit. This is suspicious')
 
     def check_for_winner(self):
         winning = { p: self.scoreboard[p] >= self.endscore for p in [True, False]}
@@ -410,7 +499,7 @@ class CribbageMatch:
         if all(winning.values()):
             # Somehow, both players passed the winning mark. This shouldn't happen.
             self.winner = None
-            raise CribbageGameEnded('Both players won')
+            raise CribbageGameError('Both players won')
         elif winning[self.dealer]:
             self.winner = self.dealer
         elif winning[self.player]:
@@ -419,7 +508,7 @@ class CribbageMatch:
             self.winner = None
             return
         
-        raise CribbageGameEnded('Winner!')
+        raise CribbageGameError('Winner!')
 
     def congratulate(self):
         print(f'Winner! {self.agents[self.winner].name}')

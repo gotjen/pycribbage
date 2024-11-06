@@ -27,16 +27,16 @@ class Card:
         assert not mesg, ValueError(mesg)
 
     @property
-    def suit_symb(self):
+    def suit_char(self):
         return suit_char[self.Suit]
 
     @property
-    def value_symb(self):
+    def value_char(self):
         return value_char[self.Value]
 
     def __str__(self) -> str:
         '''Formats <Value><Suit> like [ 4 ♥ ]'''
-        return '[' + ' '*(2-len(self.suit_symb)) + self.suit_symb + ' ' + self.value_symb + ' ]'
+        return '[' + ' '*(2-len(self.suit_char)) + self.suit_char + ' ' + self.value_char + ' ]'
     
     def __repr__(self) -> str:
         return self.__str__()
