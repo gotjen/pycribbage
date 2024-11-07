@@ -182,7 +182,7 @@ def chantscore(bd):
         running += 2 * bd['pair']
         if bd['pair'] == 1:
             pair_phrase = 'Pair'
-        elif bd['pair'] > 2:
+        elif bd['pair'] == 2:
             pair_phrase = 'Two pair'
         elif bd['pair'] == 3:
             pair_phrase = 'Tripsies'
@@ -289,6 +289,11 @@ class CribbageMatch:
         if self.verbose:
             print(*args, **kwargs)
     
+    def pause(self,*args):
+        '''Wait for player input before proceeding'''
+        if self.verbose:
+            return input(*args)
+    
     def update_score(self, points, player):
         self.scoreboard[player] += points
         self.check_for_winner()
@@ -335,11 +340,14 @@ class CribbageMatch:
         
         inhand = {p: hands[p].copy() for p in [True,False]}  # Copy of hands to discard from
         inplay = []  # run of played cards
+        play_order = []  # Order of play [player, dealer, player, player ... etc]
 
         loopcount = 0
         while loopcount<=25:
             loopcount += 1
             this_play_score = 0
+            turn_name = self.agents[turn].name
+            other_name = self.agents[not turn].name
 
             # get player discard
             played = self.agents[turn].play(inhand[turn],inplay)
@@ -349,33 +357,39 @@ class CribbageMatch:
                     go_flag = turn  # set flag - this is the first player to say go.
 
                 if go_flag is not turn:  # if other player said go, this player take 1 for the go.
-                    chant = f'Player {self.agents[turn].name} takes {score_value['go']} for the "GO".'
+                    chant = f'Player {turn_name} takes {score_value['go']} for the "GO".'
                     self.update_score(score_value['go'], turn)
                     do_reset = True
                 elif not inhand[not turn]:  # if other player has no cards, other gets 1 for the go, and reset
-                    chant = f'Player {self.agents[turn].name} says "GO".'
-                    chant += f'Player {self.agents[not turn].name} takes {score_value['go']} for the "GO".'
+                    if play_order[-1] is turn:
+                        # This player was last to play. Score 'last card in round'
+                        chant = f'Player {turn_name} takes {score_value['go']} for last'
+                    else:
+                        # Other player was last to play. Other scores for the go.
+                        chant = f'Player {turn_name} says "GO".\n'
+                        chant += f'Player {other_name} takes {score_value['go']} for the "GO".'
                     self.update_score(score_value['go'], not turn)
                     do_reset = True
                 else:  # Pass to next player
-                    chant = f'Player {self.agents[turn].name} says "GO".'
+                    chant = f'Player {turn_name} says "GO".'
 
             else:  # Played card
                 # Add card to play stack
 
                 if tally + card_value[inhand[turn][played].Value] > 31:  # Check for illegal play
                     raise CribbageGameError(f'''Tally = {tally} exceeds 31.
-                    Player:{self.agents[turn].name} played {inhand[turn][played]}
+                    Player:{turn_name} played {inhand[turn][played]}
                     Played: {inplay}''')
 
                 inplay.append(inhand[turn].pop(played))
+                play_order.append(turn)
                 tally = sum_cards(inplay)
                 this_play_score += score_play(inplay)
 
                 is_lastcard = not inhand[self.player] and not inhand[self.dealer]
                 is_31 = tally == score_value['max_tally']
 
-                chant = f'Player {self.agents[turn].name} plays the {inplay[-1]}. Says {tally}.'
+                chant = f'Player {turn_name} plays the {inplay[-1]}. Says {tally}.'
             
 
             if is_lastcard:
@@ -405,9 +419,8 @@ class CribbageMatch:
                 tally = 0  # reset score tally
                 chant = ''
                 do_reset = False
-
-            # switch turns
-            if inhand[not turn] and not go_flag is (not turn):  # only if other player has cards they can play
+            elif inhand[not turn] and not go_flag is (not turn):  # only if other player has cards they can play
+                # switch turns
                 turn = not turn
 
         if loopcount > 12:  # no play can exceed 10 volleys
@@ -431,6 +444,8 @@ class CribbageMatch:
         self.print(chantscore(player_breakdown))
         self.update_score(player_score, self.player)
         self.print('')
+        self.pause()
+
 
         # dealer hand
         self.print(f'Dealer {self.dealer_name} counts hand ..')
@@ -439,6 +454,7 @@ class CribbageMatch:
         self.print(chantscore(dealer_breakdown))
         self.update_score(dealer_score, self.dealer)
         self.print('')
+        self.pause()
 
         # dealer crib
         self.print(f'Dealer {self.dealer_name} counts crib ..')
@@ -447,6 +463,7 @@ class CribbageMatch:
         self.print(chantscore(crib_breakdown))
         self.update_score(crib_score, self.dealer)
         self.print('')
+        self.pause()
 
     def playround(self):
 

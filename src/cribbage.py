@@ -99,7 +99,6 @@ def optimal_play(hand, inplay):
     # say 'go' if no cards can be played
     max_play_value = score_value['max_tally'] - sum_cards(inplay)
     iplayable = list(filter(lambda k: card_value[hand[k].Value] <= max_play_value, range(len(hand))))
-    playable = list(filter( lambda c: card_value[c.Value] <= max_play_value, hand))
 
     if not iplayable:
         return 'GO'
@@ -297,8 +296,7 @@ class CribAgent:
                 
                 while True:
                     try:
-                        C = input('Choose discard. Separate index by space: ')
-                        C = list(map(int, C.split(' ')))
+                        C = list(map(int, input('Choose discard: ').strip().replace(' ','')))
                         assert len(C) == 2, "Must discard two cards"
                         return C
                     except Exception as err:
@@ -319,7 +317,7 @@ class CribAgent:
         '''
         # say 'go' if no cards can be played
         max_play_value = score_value['max_tally'] - sum_cards(inplay)
-        playable = list(filter( lambda c: card_value[c.Value] <= max_play_value, hand))
+        iplayable = list(filter(lambda k: card_value[hand[k].Value] <= max_play_value, range(len(hand))))
 
         # choose card to play
         match self.strategy:
@@ -334,7 +332,7 @@ class CribAgent:
 
                 while True:
                     try:
-                        if not playable:
+                        if not iplayable:
                             input('Enter: say "GO"')
                             return 'GO'
                         return int(input('Choose play: '))
@@ -343,9 +341,9 @@ class CribAgent:
                             raise KeyboardInterrupt
                         print('Invalid. Choose one cards')
             case 'random':
-                if not playable:  # no playable cards, say go
+                if not iplayable:  # no playable cards, say go
                     return 'GO'
-                return hand.index(playable[-1])  # Discard highest playable value # TODO better strategy for computer
+                return iplayable[-1]  # Discard highest playable value # TODO better strategy for computer
             case 'fit':
                 return optimal_play(hand, inplay)
             case _:
