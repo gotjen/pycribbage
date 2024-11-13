@@ -1,10 +1,7 @@
 import random
 from itertools import combinations, chain
 
-if __name__ == "__main__":
-    from playing_cards import full_deck, discard_from_hand, sort_cards
-else:
-    from .playing_cards import full_deck, discard_from_hand, sort_cards
+from cribbage.cards import full_deck, discard_from_hand, sort_cards
 
 # cribbage specific rules
 card_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]  # maps to `Value`

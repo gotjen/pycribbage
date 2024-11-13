@@ -1,8 +1,8 @@
 import unittest
 import random
 
-from src.playing_cards import Card, full_deck, sort_cards, random_cards
-from src.cribbage_gameplay import breakdown_counter_empty, cribscore, isnibs, isflush, isflush_in_hand, isrun, isfifteen, ispair, chantscore
+from cribbage.cards import *
+from cribbage.game import *
 
 rand_suit = lambda: random.randint(0,3)
 

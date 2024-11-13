@@ -1,6 +1,6 @@
 import random
-from src.cribbage_gameplay import CribbageMatch
-from src.cribbage import CribAgent
+from cribbage.game import CribbageMatch
+from cribbage.engine import CribAgent
 
 random.seed
 

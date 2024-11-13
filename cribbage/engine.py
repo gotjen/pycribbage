@@ -15,12 +15,8 @@ from collections import Counter
 from random import sample
 from itertools import combinations
 
-if __name__ == "__main__":
-    from playing_cards import full_deck, random_cards, discard_from_hand
-    from cribbage_gameplay import cribscore, score_value, sum_cards, card_value, score_play
-else:
-    from .playing_cards import full_deck, random_cards, discard_from_hand
-    from .cribbage_gameplay import cribscore,score_value, sum_cards, card_value, score_play
+from cribbage.cards import full_deck, random_cards, discard_from_hand
+from cribbage.game import cribscore,score_value, sum_cards, card_value, score_play
 
 def rand_hand_test():
     hand = random_cards(6)

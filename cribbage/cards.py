@@ -1,7 +1,6 @@
 from random import sample, shuffle
 from dataclasses import dataclass
 from typing import List, Tuple
-import unittest
 
 # Card type def
 SUIT = int
@@ -72,7 +71,9 @@ def sort_cards(cards: Hand) -> Hand:
     return sorted(list(cards), key=lambda c: c.Value + 0.1*c.Suit)
 
 
-def random_cards(n=5, pool: Hand = full_deck()):
+def random_cards(n=5, pool: Hand = None):
+    if pool is None:
+        pool = full_deck()
     return sample(list(pool), n)
 
 
@@ -85,23 +86,3 @@ def discard_from_hand(hand: Hand, idisc: List[int]) -> Tuple[Hand, Hand]:
     idisc_cleaned = sorted(list(set(idisc)), reverse=True)
     disc = [keep.pop(k) for k in idisc_cleaned]
     return keep, disc
-
-
-class TestCards(unittest.TestCase):
-    def setUp(self):
-        self.deck = list(full_deck())
-
-    def test_fulldeck(self):
-        assert len(self.deck) == 52, f'There are 52 cards in a deck not {len(self.deck)}'
-        
-        excl = [self.deck[k] for k in range(0, 52, 3)]
-        deck_part = full_deck(bar=excl)
-        assert len(deck_part) == 52-len(excl), 'Should have excluded n cards'
-        assert not any([e in deck_part for e in excl]), 'Excluded cards appear in deck sample'
-
-        subsample = random_cards(n=10, pool=excl)
-        assert all([c in excl for c in subsample]), 'All cards in sample must be from pool'
-
-
-if __name__ == '__main__':
-    unittest.main()
