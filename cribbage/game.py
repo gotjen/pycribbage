@@ -37,7 +37,6 @@ score_value = {
     'max_tally': 31 # rules
 }
 
-
 def breakdown_counter_empty():
     return breakdown_counter.copy()
 
@@ -45,34 +44,27 @@ def breakdown_counter_empty():
 class CribCountException(Exception):
     pass
 
-
 def isnibs(hand):
     for c in hand[1:]:
         if c.Value == 10 and c.Suit == hand[0].Suit:
             return True
     return False
 
-
 def isflush(hand):
     # all cards are the same suit
     return len(set(map(lambda c: c.Suit, hand))) == 1
 
-
 def isflush_in_hand(hand):
     return len(set(map(lambda c: c.Suit, hand[1:]))) == 1
-
 
 def isrun(sub):
     return all([k == (c.Value-sub[0].Value) for k, c in enumerate(sub)])
 
-
 def isfifteen(sub):
     return sum_cards(sub) == 15
 
-
 def ispair(sub):
     return len(sub) == 2 and sub[0].Value == sub[1].Value
-
 
 def cribscore(hand):
     breakdown = breakdown_counter_empty()
@@ -120,7 +112,6 @@ def cribscore(hand):
         breakdown['zero'] += 1
 
     return score, breakdown
-
 
 def chantscore(bd):
     chant = []
@@ -210,7 +201,6 @@ def chantscore(bd):
         raise CribCountException('Miscount during cribchant')
     return chant
 
-
 def score_play(inplay: list) -> int:
     '''
     Score points during the play
@@ -253,6 +243,7 @@ def score_play(inplay: list) -> int:
 
 class CribbageGameError(Exception):
     pass
+
 
 class CribbageMatch:
     scoreboard = {True: 0, False: 0}
@@ -442,7 +433,6 @@ class CribbageMatch:
         self.update_score(player_score, self.player)
         self.print('')
         self.pause()
-
 
         # dealer hand
         self.print(f'Dealer {self.dealer_name} counts hand ..')

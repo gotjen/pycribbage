@@ -1,6 +1,8 @@
+import re
 from random import sample, shuffle
 from dataclasses import dataclass
 from typing import List, Tuple
+
 
 # Card type def
 SUIT = int
@@ -8,7 +10,7 @@ Suit = [SPADE, HEART, DIAMOND, CLUB] = range(4)
 suit_char = u'\u2660\u2661\u2662\u2663'  # '♠♥♢♣'
 
 VALUE = int
-Value = range(13)
+Value = [ACE,TWO,THREE,FOUR,FIVE,SIX,SEVEN,EIGHT,NINE,TEN,JACK,QUEEN,KING] = range(13)
 value_char = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 
 
@@ -44,7 +46,7 @@ class Card:
 Hand = List[Card,]
 
 
-def full_deck(bar: Hand = Hand, suits=Suit, values=Value, do_shuffle=False) -> Hand:
+def full_deck(bar:Hand=[], suits=Suit, values=Value, do_shuffle=False) -> Hand:
     '''
     Generate a full deck of cards
     `deck = full_deck()` gives a deck of cards ordered by value, grouped by suit
@@ -67,15 +69,48 @@ def full_deck(bar: Hand = Hand, suits=Suit, values=Value, do_shuffle=False) -> H
     return deck
 
 
-def sort_cards(cards: Hand) -> Hand:
+def sort_cards(cards:Hand) -> Hand:
+    '''Sort cards by value'''
     return sorted(list(cards), key=lambda c: c.Value + 0.1*c.Suit)
 
 
-def random_cards(n=5, pool: Hand = None):
+def random_cards(n=5, pool:Hand=None) -> Hand:
+    '''
+    Generate unique hand of random cards
+    n: number of random in cards.
+    pool (optional): list of cards to choose from without replacement
+    '''
+
     if pool is None:
         pool = full_deck()
-    return sample(list(pool), n)
+    return sample(pool, n)
 
+def str2hand(s:str) -> Hand:
+    '''
+    Parse cards from a string in the form '[ <suit><card ]'.
+    Return a hand of cards
+    '''  
+
+    patt = r'\[\s*([♠♡♢♣])\s*(\d+|[AJQK])\s\]'
+    matches = re.findall(patt,s)
+
+    cards = []
+    
+    for S,V in matches:
+        try:
+            invalid = 'suit'
+            s = cards.suit_char.index(S)
+            invalid = 'valid'
+            v = cards.value_char.index(V)
+        except ValueError:
+            print(f'Skipping invalid {invalid} in card [ {V},{S}]')
+
+        this_card = Card(s,v)
+        assert this_card not in cards, 'Illegal. Duplicate cards appear: {this_card}.'
+
+        cards.append( this_card )
+
+    return cards
 
 def discard_from_hand(hand: Hand, idisc: List[int]) -> Tuple[Hand, Hand]:
     '''
